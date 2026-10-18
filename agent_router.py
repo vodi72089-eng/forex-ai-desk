@@ -27,7 +27,21 @@ def _run_fixed_cli(executable: str, args: list[str], prompt: str, timeout: int =
     return AgentReply(executable, output, bool(output), "Aucune sortie." if not output else "")
 
 def ask_opencode(prompt: str) -> AgentReply:
-    return _run_fixed_cli("opencode", ["run"], prompt)
+    # OpenCode's run command accepts the prompt as a positional argument.
+    path = shutil.which("opencode")
+    if not path:
+        return AgentReply("opencode", "", False, "Commande 'opencode' introuvable.")
+    try:
+        completed = subprocess.run([path, "run", prompt], capture_output=True, text=True,
+                                   timeout=90, check=False, shell=False)
+    except subprocess.TimeoutExpired:
+        return AgentReply("opencode", "", False, "Délai d'attente dépassé.")
+    except OSError as exc:
+        return AgentReply("opencode", "", False, str(exc))
+    output = (completed.stdout or "").strip()
+    if completed.returncode != 0:
+        return AgentReply("opencode", output, False, (completed.stderr or "Échec CLI").strip()[:1200])
+    return AgentReply("opencode", output, bool(output), "Aucune sortie." if not output else "")
 
 def ask_hermes(prompt: str) -> AgentReply:
     raw = os.getenv("HERMES_ARGS", "[]")
