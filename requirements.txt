@@ -1,0 +1,4 @@
+pypdf>=5.0.0
+pyinstaller>=6.0.0
+# Optional on Windows with a local MetaTrader 5 terminal:
+MetaTrader5>=5.0.0; platform_system == "Windows"
