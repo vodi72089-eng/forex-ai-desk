@@ -1,18 +1,19 @@
 # Forex AI Desk
 
-Application Windows pour analyser des stratégies Forex avec l'IA, consulter MetaTrader 5 et tester des idées en **paper trading**.
+Application de bureau Windows pour lire des stratégies Forex en PDF, vérifier la présence de règles mesurables, demander une synthèse à des agents IA configurés et consulter MetaTrader 5 en lecture seule.
 
 ## État actuel
 
-Ce dépôt contient le socle initial. Ce n'est pas encore un robot de trading réel prêt pour la production.
+Le dépôt contient un prototype en cours de développement, pas un robot de trading réel prêt pour la production.
 
-### Objectifs
-- Interface desktop Windows.
-- Import et extraction de texte depuis des PDF de stratégies.
-- Connexion MetaTrader 5 facultative pour lire le compte et les prix.
-- Mode simulation par défaut.
-- Adaptateurs séparés pour Hermes, OpenCode CLI et une API Jev, à configurer lorsque leurs interfaces exactes sont confirmées.
-- Création d'un exécutable Windows via GitHub Actions.
+### Fonctionnalités présentes
+- Interface de bureau Python/Tkinter.
+- Extraction du texte des PDF sélectionnables (pas encore d'OCR pour les PDF scannés).
+- Vérification heuristique de la présence de conditions d'entrée, stop-loss, take-profit, timeframe et gestion du risque.
+- Routage d'analyse vers une API compatible OpenAI, puis Hermes/OpenCode en secours si ces programmes sont installés et configurés.
+- Vérification facultative de la connexion MetaTrader 5 en lecture seule.
+- Tests unitaires exécutés avant le build Windows.
+- Workflow GitHub Actions pour produire un artefact EXE si les tests et la compilation réussissent.
 
 ## Installation locale
 
@@ -25,17 +26,29 @@ pip install -r requirements.txt
 python main.py
 ```
 
+## Configuration de l'agent API
+
+Les paramètres Jev sont volontairement lus depuis les variables d'environnement. L'API doit être compatible avec le format Chat Completions :
+
+- `JEV_BASE_URL` : URL de base du fournisseur, sans suffixe `/chat/completions`.
+- `JEV_API_KEY` : clé secrète.
+- `JEV_MODEL` : nom exact du modèle.
+- `HERMES_ARGS` : facultatif, tableau JSON de paramètres CLI fixes si la version de Hermes en a besoin.
+
+Ne committez jamais de clés dans ce dépôt public. L'adaptateur Jev n'a pas été validé contre une documentation API Jev spécifique; il nécessite confirmation de son format exact. Les interfaces CLI Hermes/OpenCode peuvent varier selon la version installée.
+
 ## MetaTrader 5
 
-Installez le terminal MetaTrader 5 et connectez-vous à un compte de démonstration. Le package Python `MetaTrader5` est pris en charge principalement sous Windows. La connexion est facultative; l'application démarre en mode simulation si MT5 n'est pas disponible.
+Installez le terminal MetaTrader 5 sous Windows. La vérification de connexion est facultative. Le prototype ne contient aucune fonction d'envoi d'ordres.
 
-## Sécurité financière
+## Sécurité et limites
 
-- Le mode simulation est le comportement par défaut.
-- Aucune transaction réelle n'est envoyée par cette version initiale.
-- Ne mettez jamais de clé API, mot de passe ou fichier de compte dans GitHub.
-- Toute fonction de trading réel devra exiger une activation explicite, une validation du risque, des limites de taille/perte et des tests avant son implémentation.
+- Cette application ne fournit pas de conseil financier et ne prédit pas la rentabilité.
+- La détection de mots-clés n'est pas une validation de stratégie.
+- Aucune transaction réelle n'est envoyée.
+- Les fonctions d'exécution d'ordres, le backtest historique complet, l'OCR et le stockage sécurisé des secrets ne sont pas encore implémentés.
+- N'utilisez pas de compte réel pour tester un prototype.
 
 ## Compilation Windows
 
-Le workflow GitHub Actions `.github/workflows/build-windows.yml` produit un artefact `.exe` après une exécution réussie. Ce build n'est pas encore signé numériquement.
+Dans GitHub, ouvrez **Actions**, sélectionnez **Test and build Windows executable**, puis lancez **Run workflow**. Après un succès, téléchargez l'artefact `ForexAIDesk-Windows` depuis l'exécution concernée. Un EXE n'est pas généré tant que le workflow n'a pas réussi.
