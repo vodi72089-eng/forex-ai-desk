@@ -52,3 +52,14 @@ Installez le terminal MetaTrader 5 sous Windows. La vérification de connexion e
 ## Compilation Windows
 
 Dans GitHub, ouvrez **Actions**, sélectionnez **Test and build Windows executable**, puis lancez **Run workflow**. Après un succès, téléchargez l'artefact `ForexAIDesk-Windows` depuis l'exécution concernée. Un EXE n'est pas généré tant que le workflow n'a pas réussi.
+
+
+## Mises à jour intégrées de l'EXE
+
+Le programme compilé vérifie au démarrage si une version plus récente est publiée dans **GitHub Releases**. Le bouton **Rechercher une mise à jour** permet aussi de lancer la vérification manuellement.
+
+Quand une version plus récente est disponible, l'utilisateur peut accepter ou reporter l'installation. L'application télécharge l'EXE et son fichier SHA-256 depuis la release, vérifie l'empreinte, puis lance un petit script Windows qui remplace l'EXE après sa fermeture et redémarre la nouvelle version.
+
+Chaque build réussi sur `main` exécute les tests, compile `ForexAIDesk.exe`, calcule son SHA-256 et publie une release versionnée. Le binaire est disponible dans l'onglet **Releases**; l'artefact temporaire de GitHub Actions n'est pas nécessaire pour l'auto-update.
+
+**Limites importantes :** le premier EXE doit être téléchargé manuellement depuis une release. Les mises à jour intégrées ne fonctionnent que dans la version compilée, pas depuis `python main.py`. Le binaire n'est pas signé numériquement. Vérifiez le code et les releases avant installation.
