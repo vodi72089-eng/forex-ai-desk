@@ -63,3 +63,14 @@ Quand une version plus récente est disponible, l'utilisateur peut accepter ou r
 Chaque build réussi sur `main` exécute les tests, compile `ForexAIDesk.exe`, calcule son SHA-256 et publie une release versionnée. Le binaire est disponible dans l'onglet **Releases**; l'artefact temporaire de GitHub Actions n'est pas nécessaire pour l'auto-update.
 
 **Limites importantes :** le premier EXE doit être téléchargé manuellement depuis une release. Les mises à jour intégrées ne fonctionnent que dans la version compilée, pas depuis `python main.py`. Le binaire n'est pas signé numériquement. Vérifiez le code et les releases avant installation.
+
+## Skills de design pour les agents IA
+
+Les workflows de design sont disponibles dans le dépôt pour guider les agents qui travaillent sur l'interface :
+
+- `.agents/skills/frontend-design/SKILL.md` — définir la direction visuelle avant de coder.
+- `.agents/skills/ui-ux-pro-max/SKILL.md` — concevoir des parcours, des composants et un système visuel cohérents.
+- `.agents/skills/web-design-guidelines/SKILL.md` — contrôler l'accessibilité, les états d'interface, la lisibilité et la confiance avant livraison.
+- `AGENTS.md` — indique aux agents quand lire ces skills et rappelle les contraintes propres au projet.
+
+Ces fichiers sont des instructions locales adaptées à Forex AI Desk et à son interface Python/Tkinter; ils ne sont pas des copies intégrales des projets tiers. Ils s'inspirent de workflows de référence : [Anthropic frontend-design](https://github.com/anthropics/skills), [Vercel web-design-guidelines](https://github.com/vercel-labs/agent-skills) et [UI/UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill). Les principes web sont à adapter au framework réellement utilisé : n'ajoutez pas de framework web au projet desktop simplement pour appliquer ces recommandations.
