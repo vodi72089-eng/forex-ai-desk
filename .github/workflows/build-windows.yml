@@ -1,4 +1,4 @@
-name: Test and build Windows executable
+name: Test, build and publish Windows executable
 
 on:
   workflow_dispatch:
@@ -8,12 +8,13 @@ on:
       - "**.py"
       - "requirements.txt"
       - ".github/workflows/build-windows.yml"
+      - "run_windows.bat"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  test-and-build:
+  test-build-release:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -22,6 +23,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Set version for this build
+        shell: pwsh
+        run: |
+          $version = "0.1.$env:GITHUB_RUN_NUMBER"
+          Set-Content -Path version.py -Value ('__version__ = "' + $version + '"' + "`n") -Encoding utf8
+          "APP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -30,9 +37,22 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Build executable
         run: pyinstaller --noconfirm --clean --onefile --windowed --name ForexAIDesk main.py
-      - name: Upload executable
-        uses: actions/upload-artifact@v4
+      - name: Create SHA-256 checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash dist/ForexAIDesk.exe -Algorithm SHA256).Hash.ToLower()
+          Set-Content -Path dist/ForexAIDesk.exe.sha256 -Value ($hash + "  ForexAIDesk.exe") -Encoding ascii
+      - name: Publish versioned release
+        uses: softprops/action-gh-release@v2
         with:
-          name: ForexAIDesk-Windows
-          path: dist/ForexAIDesk.exe
-          if-no-files-found: error
+          tag_name: v${{ env.APP_VERSION }}
+          name: Forex AI Desk v${{ env.APP_VERSION }}
+          body: |
+            Build Windows automatique de Forex AI Desk.
+            Les tests unitaires et la compilation sont exécutés avant la publication.
+            Mode simulation uniquement; aucune transaction réelle n'est envoyée.
+          files: |
+            dist/ForexAIDesk.exe
+            dist/ForexAIDesk.exe.sha256
+          draft: false
+          prerelease: false
