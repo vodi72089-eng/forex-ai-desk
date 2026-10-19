@@ -40,7 +40,13 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
       - name: Build executable
-        run: pyinstaller --noconfirm --clean --onefile --windowed --name ForexAIDesk main.py
+        run: >-
+          pyinstaller --noconfirm --clean --onefile --windowed
+          --name ForexAIDesk
+          --collect-all pypdf
+          --hidden-import MetaTrader5
+          --collect-all MetaTrader5
+          main.py
       - name: Create SHA-256 checksum
         shell: pwsh
         run: |
