@@ -13,6 +13,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: forex-ai-desk-windows-release
+  cancel-in-progress: true
+
 jobs:
   test-build-release:
     runs-on: windows-latest
