@@ -82,3 +82,41 @@ def ask_agent(prompt: str, preferred: str = "jev") -> AgentReply:
             return reply
         errors.append(name + ": " + (reply.detail or "indisponible"))
     return AgentReply("none", "", False, "Aucun agent disponible. " + " | ".join(errors))
+
+
+def diagnose_opencode() -> AgentReply:
+    """Check that OpenCode is installed and can answer a minimal prompt."""
+    path = shutil.which("opencode")
+    if not path:
+        return AgentReply(
+            "opencode", "", False,
+            "La commande 'opencode' est introuvable dans le PATH de cette application. "
+            "Dans PowerShell, exécute 'opencode --version'. Si cela fonctionne seulement dans un autre terminal, "
+            "ferme puis relance Forex AI Desk. Vérifie aussi que le fournisseur/modèle OpenCode est configuré."
+        )
+    try:
+        version = subprocess.run([path, "--version"], capture_output=True, text=True,
+                                 timeout=15, check=False, shell=False)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return AgentReply("opencode", "", False, f"Impossible de démarrer OpenCode : {exc}")
+    if version.returncode != 0:
+        return AgentReply("opencode", "", False,
+                          (version.stderr or version.stdout or "La commande --version a échoué.").strip()[:1200])
+    try:
+        probe = subprocess.run([path, "run", "Réponds uniquement : OpenCode fonctionne."],
+                               capture_output=True, text=True, timeout=35, check=False, shell=False)
+    except subprocess.TimeoutExpired:
+        return AgentReply("opencode", "", False,
+                          f"OpenCode est installé ({version.stdout.strip()}), mais le test dépasse 35 secondes. "
+                          "Vérifie la connexion Internet, le modèle configuré et l'authentification.")
+    except OSError as exc:
+        return AgentReply("opencode", "", False, f"Impossible de lancer OpenCode : {exc}")
+    output = (probe.stdout or "").strip()
+    if probe.returncode != 0:
+        detail = (probe.stderr or output or "OpenCode a échoué sans message exploitable.").strip()
+        return AgentReply("opencode", "", False,
+                          f"Version détectée : {version.stdout.strip()}\nTest échoué : {detail[:1500]}")
+    if not output:
+        return AgentReply("opencode", "", False,
+                          "OpenCode a quitté sans réponse. Vérifie le modèle et la configuration.")
+    return AgentReply("opencode", f"Version : {version.stdout.strip()}\nTest réussi : {output}", True)
