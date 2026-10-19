@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from pathlib import Path
@@ -7,30 +9,34 @@ from pathlib import Path
 from strategy import extract_pdf_text
 from strategy_analyzer import review_strategy, build_ai_prompt
 from agent_router import ask_agent
+from updater import check_for_update, install_update, UpdateError
+from version import __version__
 
 
 class ForexAIDesk(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("Forex AI Desk")
+        self.title(f"Forex AI Desk v{__version__}")
         self.geometry("1000x680")
         self.minsize(780, 520)
         self.configure(bg="#101820")
         self.pdf_text = ""
+        self._update_check_running = False
 
         header = tk.Frame(self, bg="#172631", padx=20, pady=16)
         header.pack(fill="x")
         tk.Label(header, text="FOREX AI DESK", font=("Segoe UI", 20, "bold"),
                  fg="#f4f7fa", bg="#172631").pack(anchor="w")
-        tk.Label(header, text="Analyse de stratégies • MetaTrader 5 • Simulation",
+        tk.Label(header, text=f"Version {__version__} • Analyse PDF • Agents IA • MetaTrader 5",
                  font=("Segoe UI", 10), fg="#9db0bd", bg="#172631").pack(anchor="w", pady=(4, 0))
 
         toolbar = ttk.Frame(self, padding=12)
         toolbar.pack(fill="x")
-        ttk.Button(toolbar, text="Importer une stratégie PDF", command=self.import_pdf).pack(side="left")
-        ttk.Button(toolbar, text="Analyser les règles", command=self.analyze_strategy).pack(side="left", padx=8)
+        ttk.Button(toolbar, text="Importer un PDF", command=self.import_pdf).pack(side="left")
+        ttk.Button(toolbar, text="Analyser les règles", command=self.analyze_strategy).pack(side="left", padx=6)
         ttk.Button(toolbar, text="Demander à l'IA", command=self.ask_ai).pack(side="left")
-        ttk.Button(toolbar, text="État de MetaTrader 5", command=self.check_mt5).pack(side="left", padx=8)
+        ttk.Button(toolbar, text="État MT5", command=self.check_mt5).pack(side="left", padx=6)
+        ttk.Button(toolbar, text="Rechercher une mise à jour", command=lambda: self.check_updates(manual=True)).pack(side="left")
 
         self.status = tk.StringVar(value="MODE SIMULATION — aucun ordre réel n'est envoyé.")
         ttk.Label(self, textvariable=self.status, padding=(14, 4)).pack(fill="x")
@@ -41,11 +47,68 @@ class ForexAIDesk(tk.Tk):
         self.write("• Importez un PDF pour en extraire le texte.\n")
         self.write("• Analysez la présence de règles de risque et de sortie.\n")
         self.write("• Demandez une synthèse à Jev (si configuré), puis Hermes/OpenCode en secours.\n")
+        self.write("• Les mises à jour sont recherchées sur les releases officielles de ce dépôt GitHub.\n")
         self.write("• Les fonctions de trading réel ne sont pas implémentées.\n")
+        self.after(1800, lambda: self.check_updates(manual=False))
 
     def write(self, text: str) -> None:
         self.output.insert("end", text)
         self.output.see("end")
+
+    def check_updates(self, manual: bool = False) -> None:
+        if self._update_check_running:
+            if manual:
+                messagebox.showinfo("Mise à jour", "Une vérification est déjà en cours.")
+            return
+        self._update_check_running = True
+        self.status.set("Vérification des mises à jour…")
+
+        def worker() -> None:
+            update = None
+            error = None
+            try:
+                update = check_for_update(__version__)
+            except Exception as exc:
+                error = str(exc)
+            self.after(0, lambda: self._finish_update_check(update, error, manual))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _finish_update_check(self, update, error, manual: bool) -> None:
+        self._update_check_running = False
+        if error:
+            self.status.set("Vérification des mises à jour impossible.")
+            if manual:
+                messagebox.showwarning("Mise à jour", error)
+            return
+        if not update:
+            self.status.set(f"Forex AI Desk v{__version__} — application à jour.")
+            if manual:
+                messagebox.showinfo("Mise à jour", f"Tu utilises déjà la version {__version__}.")
+            return
+        self.status.set(f"Nouvelle version disponible : {update['version']}")
+        notes = update.get("notes", "").strip()
+        prompt = f"Forex AI Desk v{update['version']} est disponible.\n\n"
+        if notes:
+            prompt += notes[:1200] + "\n\n"
+        prompt += "Télécharger et installer cette mise à jour maintenant ?"
+        if not messagebox.askyesno("Mise à jour disponible", prompt):
+            self.write(f"\nMise à jour v{update['version']} disponible, installation reportée.\n")
+            return
+        if not getattr(sys, "frozen", False):
+            messagebox.showinfo("Version développeur",
+                                "La mise à jour automatique fonctionne uniquement dans l'application EXE compilée.")
+            return
+        try:
+            self.status.set("Téléchargement et vérification SHA-256…")
+            self.update_idletasks()
+            install_update(update)
+            messagebox.showinfo("Mise à jour prête",
+                                "Le fichier a été vérifié. Forex AI Desk va se fermer pour appliquer la mise à jour, puis se relancer.")
+            self.destroy()
+        except (UpdateError, OSError) as exc:
+            messagebox.showerror("Mise à jour impossible", str(exc))
+            self.status.set("Échec de la mise à jour. L'application actuelle est conservée.")
 
     def import_pdf(self) -> None:
         filename = filedialog.askopenfilename(title="Choisir un PDF de stratégie",
