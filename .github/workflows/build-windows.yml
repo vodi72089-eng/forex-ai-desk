@@ -44,6 +44,8 @@ jobs:
           pyinstaller --noconfirm --clean --onefile --windowed
           --name ForexAIDesk
           --collect-all pypdf
+          --collect-all cryptography
+          --hidden-import cryptography.hazmat.bindings._rust
           --hidden-import MetaTrader5
           --collect-all MetaTrader5
           main.py
